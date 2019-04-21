@@ -2,12 +2,13 @@ const int buttonPin = 2;
 const int ledPin =  13;     
 
 int intLoopCount = 0;
+bool isActionRunning = false;
 
-int buttonState;  
+int currentButtonState;  
 int ledState = HIGH;         // the current state of the output pin
 int lastButtonState = LOW;   // the previous reading from the input pin
 
-unsigned long lastDebounceTime = 0;  // the last time the output pin was toggled
+unsigned long lastDebounceTime = 0;  // last time buttonPin was toggled in mil-seconds since program start
 unsigned long debounceDelay = 50;    // the debounce time; increase if the output flickers
 
 
@@ -28,43 +29,46 @@ void loop()
   
   //loopHoldToRun();
   loopToggleToRun();
+
+  if(isActionRunning == true)
+  {
+    runPattern(50);
+  }
   
-  printToSerial("New loop", intLoopCount);
+  printToSerial(isActionRunning, intLoopCount);
 }
+
+
 
 static void loopToggleToRun()
 {
-  int reading = digitalRead(buttonPin); //(HIGH or LOW reading)
+  int reading = digitalRead(buttonPin); //(HIGH is putton pressesd or LOW if not)
 
-   if (reading != lastButtonState)
+   //note any type of change
+   if (reading != lastButtonState) // if the current HIGH/LOW on the button pin had changed
    {
-    lastDebounceTime = millis();
+      lastDebounceTime = millis(); // reset the debouncing timer
    }
 
-  if ((millis() - lastDebounceTime) > debounceDelay)
-  {
-    if (reading != buttonState)
-    {
-      buttonState = reading;
 
-      if (buttonState == HIGH)
+  //make sure the change is not just noise 
+  if ((millis() - lastDebounceTime) > debounceDelay) //if total time from lastDebounceTime is > 50
+  {
+    //confirm change
+    if(reading != currentButtonState)
+    {
+      currentButtonState = reading;
+
+      //confirm that change is a press in only 
+      if(currentButtonState == HIGH)
       {
-        ledState = !ledState;
+        isActionRunning = !isActionRunning; //flip toggle 
       }
-      
+             
     }
+    
   }
 
-  digitalWrite(ledPin, ledState);
-
-//  if (buttonState == HIGH)
-//  {
-//    runPattern(50);
-//  }
-//  else
-//  {
-//    digitalWrite(ledPin, LOW);
-//  }
   
   lastButtonState = reading;  
 }
@@ -77,9 +81,9 @@ static void loopToggleToRun()
 //unused
 static void loopHoldToRun() //hold in pin 2 button to run pattern
 {
-  buttonState = digitalRead(buttonPin);
+  currentButtonState = digitalRead(buttonPin);
 
-  if (buttonState == HIGH)
+  if (currentButtonState == HIGH)
   {
     runPattern(50);
   }
@@ -107,11 +111,33 @@ static void runPattern(int intWaitTime)
     digitalWrite(ledPin, HIGH); 
     delay(intWaitTime * 10);                       
     digitalWrite(ledPin, LOW);    
-    delay(intWaitTime); 
+    delay(intWaitTime);   
 }
 
 
 static void printToSerial(String strMessage, int intLoopCount)
 {
+  Serial.print(strMessage + " - Loop iteration: " + intLoopCount + "\n");
+}
+
+static void printToSerial(String strMessage)
+{
+  Serial.print(strMessage + " - Loop iteration: " + "\n");
+}
+
+
+static void printToSerial(bool isActionRunning, int intLoopCount)
+{
+  String strMessage = "";
+
+  if(isActionRunning == true)
+  {
+     strMessage = "true";
+  }
+  else
+  {
+    strMessage = "false";
+  }
+
   Serial.print(strMessage + " - Loop iteration: " + intLoopCount + "\n");
 }
